@@ -1,0 +1,5 @@
+node_modules
+.env
+clones/
+cd server
+node -e "require('dotenv').config(); console.log('KEY SET:', !!process.env.GEMINI_API_KEY)"

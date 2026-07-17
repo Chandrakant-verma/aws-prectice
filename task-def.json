@@ -1,0 +1,34 @@
+{
+  "family": "repolens-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::233994255511:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "repolens",
+      "image": "233994255511.dkr.ecr.ap-south-1.amazonaws.com/repolens:latest",
+      "portMappings": [{ "containerPort": 5000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "5000" },
+        { "name": "JWT_EXPIRE", "value": "7d" }
+      ],
+      "secrets": [
+        { "name": "MONGODB_URI", "valueFrom": "arn:aws:secretsmanager:ap-south-1:233994255511:secret:repolens/mongodb-uri-XXXXXX" },
+        { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-south-1:233994255511:secret:repolens/jwt-secret-XXXXXX" },
+        { "name": "GEMINI_API_KEY", "valueFrom": "arn:aws:secretsmanager:ap-south-1:233994255511:secret:repolens/gemini-api-key-XXXXXX" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/repolens",
+          "awslogs-region": "ap-south-1",
+          "awslogs-create-group": "true",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

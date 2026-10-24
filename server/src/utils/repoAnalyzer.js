@@ -1,10 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
-import crypto from "crypto";
+import os from "os";
 import simpleGit from "simple-git";
 import { ApiError } from "./ApiError.js";
 
-const CLONES_ROOT = path.resolve(process.cwd(), "clones");
+const TEMP_ROOT = os.tmpdir();
 
 const SKIP_DIRS = new Set([
   ".git",
@@ -51,9 +51,8 @@ export function assertValidGithubUrl(normalizedUrl) {
  * "only one repo at a time" is enforced is physically: every analysis
  * clones into this same folder, wiping whatever was there before.
  */
-export function getRepositoryPathFor(userId) {
-  const folderName = crypto.createHash("sha256").update(String(userId)).digest("hex").slice(0, 24);
-  return path.join(CLONES_ROOT, folderName);
+export async function getRepositoryPath() {
+  return fs.mkdtemp(path.join(TEMP_ROOT, "repolens-"));
 }
 
 export async function removeClonedFolder(dirPath) {
@@ -66,9 +65,6 @@ export async function removeClonedFolder(dirPath) {
  * prompt, plus a timeout backstop.
  */
 async function cloneIntoSlot(githubUrl, destPath) {
-  await fs.mkdir(CLONES_ROOT, { recursive: true });
-  // Wipes whatever the user previously had cloned — this IS the
-  // mechanism that makes "only one repo at a time" true.
   await removeClonedFolder(destPath);
 
   const git = simpleGit({
@@ -143,20 +139,27 @@ async function scanDirectory(rootPath) {
  * Nothing here touches a database — the caller decides what, if
  * anything, to do with the result.
  */
-export async function analyzeRepository(userId, rawGithubUrl) {
+export async function analyzeRepository(rawGithubUrl) {
   const normalizedUrl = normalizeGithubUrl(rawGithubUrl);
   assertValidGithubUrl(normalizedUrl);
 
-  const repositoryPath = getRepositoryPathFor(userId);
+  const repositoryPath = await getRepositoryPath();
 
-  await cloneIntoSlot(normalizedUrl, repositoryPath);
-  const { totalFiles, totalFolders, languages } = await scanDirectory(repositoryPath);
+  try {
+    await cloneIntoSlot(normalizedUrl, repositoryPath);
 
-  return {
-    githubUrl: normalizedUrl,
-    repositoryPath,
-    totalFiles,
-    totalFolders,
-    languages,
-  };
+    const { totalFiles, totalFolders, languages } =
+      await scanDirectory(repositoryPath);
+
+    return {
+      githubUrl: normalizedUrl,
+      repositoryPath,
+      totalFiles,
+      totalFolders,
+      languages,
+    };
+  } catch (err) {
+    await removeClonedFolder(repositoryPath);
+    throw err;
+  }
 }

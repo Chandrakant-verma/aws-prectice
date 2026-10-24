@@ -4,7 +4,10 @@ import { GoogleGenAI } from "@google/genai";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { analyzeRepository } from "../utils/repoAnalyzer.js";
+import {
+  analyzeRepository,
+  removeClonedFolder,
+} from "../utils/repoAnalyzer.js";
 
 const TEXT_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".json", ".md"]);
 const SKIP_DIRS = new Set([
@@ -87,20 +90,22 @@ export const askAboutRepository = asyncHandler(async (req, res) => {
   }
 
   // Throws ApiError(422) itself if the clone fails — asyncHandler forwards it.
-  const analysis = await analyzeRepository(req.user._id, githubUrl);
+  const analysis = await analyzeRepository(githubUrl);
 
+try {
   const context = await collectSourceContext(analysis.repositoryPath);
 
   const prompt = `You are a code assistant answering questions about a single GitHub repository: ${analysis.githubUrl}.
 Answer the user's question using ONLY the source code excerpts below. If the answer is not
 present in the excerpts, say you don't have enough information from the indexed files rather
-than guessing.
+than guessing. You can reply if a user greets you.
 
 ${context}
 
 USER QUESTION: ${question}`;
 
   const client = getClient();
+
   const response = await client.models.generateContent({
     model: "gemini-2.5-flash",
     contents: prompt,
@@ -108,5 +113,10 @@ USER QUESTION: ${question}`;
 
   const answer = response.text ?? "";
 
-  res.status(200).json(new ApiResponse("Answer generated", { answer }));
+  res.status(200).json(
+    new ApiResponse("Answer generated", { answer })
+  );
+} finally {
+  await removeClonedFolder(analysis.repositoryPath);
+}
 });

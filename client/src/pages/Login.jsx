@@ -11,28 +11,18 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
-  e.preventDefault();
-
-  console.log("Login button clicked");
-  console.log(email, password);
-
-  setSubmitting(true);
-
-  try {
-    console.log("Before login()");
-    await login(email, password);
-    console.log("After login()");
-
-    toast.success("Welcome back!");
-    navigate("/dashboard");
-  } catch (err) {
-    console.error(err);
-
-    toast.error(err?.response?.data?.message || "Could not log in");
-  } finally {
-    setSubmitting(false);
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      toast.success("Welcome back!");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not log in");
+    } finally {
+      setSubmitting(false);
+    }
   }
-}
 
   return (
     <div className="flex min-h-[calc(100vh-73px)] items-center justify-center px-6">

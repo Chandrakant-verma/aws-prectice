@@ -1,7 +1,10 @@
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { analyzeRepository } from "../utils/repoAnalyzer.js";
+import {
+  analyzeRepository,
+  removeClonedFolder,
+} from "../utils/repoAnalyzer.js";
 
 /**
  * POST /api/repositories/clone
@@ -13,20 +16,25 @@ import { analyzeRepository } from "../utils/repoAnalyzer.js";
  */
 export const cloneRepository = asyncHandler(async (req, res) => {
   const { githubUrl } = req.body;
+
   if (!githubUrl || typeof githubUrl !== "string") {
     throw new ApiError(400, "githubUrl is required");
   }
 
-  const analysis = await analyzeRepository(req.user._id, githubUrl);
+  const analysis = await analyzeRepository(githubUrl);
 
-  res.status(200).json(
-    new ApiResponse("Repository analyzed successfully", {
-      repository: {
-        githubUrl: analysis.githubUrl,
-        totalFiles: analysis.totalFiles,
-        totalFolders: analysis.totalFolders,
-        languages: analysis.languages,
-      },
-    })
-  );
+  try {
+    res.status(200).json(
+      new ApiResponse("Repository analyzed successfully", {
+        repository: {
+          githubUrl: analysis.githubUrl,
+          totalFiles: analysis.totalFiles,
+          totalFolders: analysis.totalFolders,
+          languages: analysis.languages,
+        },
+      }),
+    );
+  } finally {
+    await removeClonedFolder(analysis.repositoryPath);
+  }
 });

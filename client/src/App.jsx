@@ -3,8 +3,9 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
-import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
-import { Navbar } from "./components/Navbar.jsx";
+//import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
+import { ProtectedRoute} from "../components/ProtectedRoute.jsx"
+import { Navbar } from "../components/Navbar.jsx";
 import { Login } from "./pages/Login.jsx";
 import { Register } from "./pages/Register.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";

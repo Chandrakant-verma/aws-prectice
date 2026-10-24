@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { api } from "../api/axios.js";
-import { Loader } from "../components/Loader.jsx";
+// import { Loader } from "/components/Loader.jsx";
+import { Loader} from "../../components/Loader.jsx"
+ 
 
 export function Chat() {
   const { encodedUrl } = useParams();

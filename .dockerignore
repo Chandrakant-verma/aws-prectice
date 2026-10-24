@@ -1,7 +1,5 @@
-node_modules
-server/node_modules
-server/clones
 client/node_modules
-client/dist
-.env
+server/node_modules
 .git
+.gitignore
+README.md

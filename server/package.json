@@ -11,7 +11,7 @@
   "dependencies": {
     "@google/genai": "^0.3.0",
     "bcrypt": "^5.1.1",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^5.0.1",
     "express-validator": "^7.2.0",
@@ -22,9 +22,15 @@
     "simple-git": "^3.27.0"
   },
   "nodemonConfig": {
-    "watch": ["src"],
+    "watch": [
+      "src"
+    ],
     "ext": "js,mjs,cjs,json",
-    "ignore": ["clones/**", "clones/*", "node_modules/**"]
+    "ignore": [
+      "clones/**",
+      "clones/*",
+      "node_modules/**"
+    ]
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

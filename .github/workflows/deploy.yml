@@ -1,80 +1,41 @@
-# name: Deploy RepoLens Backend
 
-# on:
-#   push:
-#     branches:
-#       - main
+name: Build and Push to Amazon ECR
 
-# permissions:
-#   id-token: write
-#   contents: read
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-# env:
-#   AWS_REGION: ap-south-1
-#   ECR_REPOSITORY: repolens-backend
-#   ECS_CLUSTER: repolens-cluster
-#   ECS_SERVICE: repolens-task-service-55adxwol
-#   ECS_TASK_DEFINITION: repolens-task
-#   CONTAINER_NAME: repolens-container
+permissions:
+  contents: read
+  id-token: write
 
-# jobs:
-#   deploy:
-#     name: Build and Deploy
-#     runs-on: ubuntu-latest
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-#       - name: Debug GitHub OIDC
-#         env:
-#           ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
-#           ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}
-#         run: |
-#           TOKEN=$(curl -sS \
-#             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-#             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
-#             | jq -r '.value')
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
-#           echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq '{sub, aud, repository, ref}'
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-#           aws-region: ${{ env.AWS_REGION }}
-
-#       - name: Login to Amazon ECR
-#         id: login-ecr
-#         uses: aws-actions/amazon-ecr-login@v2
-
-#       - name: Build and push Docker image
-#         env:
-#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-#           IMAGE_TAG: ${{ github.sha }}
-#         run: |
-#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-#       - name: Download current ECS task definition
-#         run: |
-#           aws ecs describe-task-definition \
-#             --task-definition $ECS_TASK_DEFINITION \
-#             --query taskDefinition \
-#             --output json > task-definition.json
-
-#       - name: Update container image in task definition
-#         id: render-task-definition
-#         uses: aws-actions/amazon-ecs-render-task-definition@v1
-#         with:
-#           task-definition: task-definition.json
-#           container-name: ${{ env.CONTAINER_NAME }}
-#           image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
-#       - name: Deploy to ECS
-#         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-#         with:
-#           task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
-#           service: ${{ env.ECS_SERVICE }}
-#           cluster: ${{ env.ECS_CLUSTER }}
-#           wait-for-service-stability: true
+      - name: Build and push Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "$REGISTRY/$REPOSITORY:$IMAGE_TAG" .
+          docker push "$REGISTRY/$REPOSITORY:$IMAGE_TAG"
+          docker tag "$REGISTRY/$REPOSITORY:$IMAGE_TAG" "$REGISTRY/$REPOSITORY:latest"
+          docker push "$REGISTRY/$REPOSITORY:latest"
